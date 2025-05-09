@@ -104,6 +104,9 @@ struct config {
 	struct ip_prefix live_remote_prefix;	/* remote prefix under test */
 	struct ip_address live_gateway_ip;	/* gateway interface IP */
 
+	struct ip_prefix live_pref64;	/* prefix64 for IPv4-IPv6 translation */
+	char live_pref64_string[ADDR_STR_LEN];	/* addr/prefixlen */
+
 	char live_local_ip_string[ADDR_STR_LEN];	/* human-readable IP */
 	char live_remote_ip_string[ADDR_STR_LEN];	/* human-readable IP */
 	char live_remote_prefix_string[ADDR_STR_LEN];	/* <addr>/<prefixlen> */

@@ -204,6 +204,46 @@ int ipv6_map_to_ipv4(const struct ip_address ipv6, struct ip_address *ipv4)
 	}
 }
 
+struct ip_address ipv6_xlate_from_ipv4(const struct ip_address ipv4, const struct ip_prefix pref64)
+{
+	struct ip_address ipv6 = pref64.ip;
+
+	//Assert that pref64 is one of the valid prefix lengths
+	assert(pref64.prefix_len == 96 
+		|| pref64.prefix_len == 64
+		|| pref64.prefix_len == 56
+		|| pref64.prefix_len == 48
+		|| pref64.prefix_len == 40
+		|| pref64.prefix_len == 32);
+
+	//Copy the v4 address into the right location of the v6 address
+	memcpy(&ipv6.ip.v6.s6_addr[pref64.prefix_len / 8], &ipv4.ip.v4, sizeof(ipv4.ip.v4));
+	return ipv6;
+
+}
+
+int ipv6_xlate_to_ipv4(const struct ip_address ipv6, struct ip_address *ipv4, const struct ip_prefix pref64)
+{
+	//Assert that pref64 is one of the valid prefix lenghts
+	assert(pref64.prefix_len == 96
+		|| pref64.prefix_len == 64
+		|| pref64.prefix_len == 56
+		|| pref64.prefix_len == 48
+		|| pref64.prefix_len == 40
+		|| pref64.prefix_len == 32);
+
+	//check that the memory before the v4 address matches the prefix
+	if (memcmp(&ipv6.ip.v6.s6_addr, &pref64.ip.ip.v6.s6_addr, pref64.prefix_len / 8) != 0) {
+		return STATUS_ERR;
+	}
+
+	//extract the v4 address
+	ipv4_init(ipv4);
+	memcpy(&ipv4->ip.v4, &ipv6.ip.v6.s6_addr[pref64.prefix_len / 8], sizeof(ipv4->ip.v4));
+	return STATUS_OK;
+
+}
+
 /* Fill in a sockaddr struct and socklen_t using the given IPv4
  * address and port.
  */

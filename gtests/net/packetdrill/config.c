@@ -49,6 +49,7 @@ enum option_codes {
 	OPT_LOCAL_IP,
 	OPT_GATEWAY_IP,
 	OPT_NETMASK_IP,
+	OPT_PREF64,
 	OPT_SPEED,
 	OPT_MSS,
 	OPT_MTU,
@@ -88,6 +89,7 @@ struct option options[] = {
 	{ "local_ip",		.has_arg = true,  NULL, OPT_LOCAL_IP },
 	{ "gateway_ip",		.has_arg = true,  NULL, OPT_GATEWAY_IP },
 	{ "netmask_ip",		.has_arg = true,  NULL, OPT_NETMASK_IP },
+	{ "pref64",		.has_arg = true,  NULL, OPT_PREF64 },
 	{ "speed",		.has_arg = true,  NULL, OPT_SPEED },
 	{ "mss",		.has_arg = true,  NULL, OPT_MSS },
 	{ "mtu",		.has_arg = true,  NULL, OPT_MTU },
@@ -119,7 +121,7 @@ struct option options[] = {
 void show_usage(void)
 {
 	fprintf(stderr, "Usage: packetdrill\n"
-		"\t[--ip_version=[ipv4,ipv4-mapped-ipv6,ipv6]]\n"
+		"\t[--ip_version=[ipv4,ipv4-mapped-ipv6,ipv6,ipv4-xlate-ipv6,ipv6-xlate-ipv4]]\n"
 		"\t[--bind_port=bind_port]\n"
 		"\t[--code_command=code_command]\n"
 		"\t[--code_format=code_format]\n"
@@ -129,6 +131,7 @@ void show_usage(void)
 		"\t[--local_ip=local_ip]\n"
 		"\t[--gateway_ip=gateway_ip]\n"
 		"\t[--netmask_ip=netmask_ip]\n"
+		"\t[--pref64=nat64_prefix]\n"
 		"\t[--init_scripts=<comma separated filenames>\n"
 		"\t[--speed=<speed in Mbps>\n"
 		"\t[--mss=<MSS in bytes>\n"
@@ -377,6 +380,55 @@ static void finalize_ipv4_mapped_ipv6_config(struct config *config)
 	config->wire_protocol	= AF_INET;
 }
 
+
+/* Calculate final configuration values needed for ipv4-xlate-ipv6 */
+static void finalize_ipv4_xlate_ipv6_config(struct config *config)
+{
+	set_ipv4_defaults(config);
+
+	config->live_local_ip	= ipv4_parse(config->live_local_ip_string);
+
+	config->live_remote_prefix =
+		ipv4_prefix_parse(config->live_remote_ip_string);
+	set_remote_ip_and_prefix(config);
+
+	config->live_pref64 = ipv6_prefix_parse(config->live_pref64_string);
+	ip_prefix_normalize(&config->live_pref64);
+	
+	config->live_prefix_len =
+		netmask_to_prefix(config->live_netmask_ip_string);
+	config->live_gateway_ip = ipv4_parse(config->live_gateway_ip_string);
+	config->live_bind_ip	= ipv6_xlate_from_ipv4(config->live_local_ip,config->live_pref64);
+	config->live_connect_ip	= ipv6_xlate_from_ipv4(config->live_remote_ip,config->live_pref64);
+	config->socket_domain	= AF_INET6;
+	config->wire_protocol	= AF_INET;
+}
+
+/* Calculate final configuration values needed for ipv4-xlate-ipv6 */
+static void finalize_ipv6_xlate_ipv4_config(struct config *config)
+{
+	set_ipv6_defaults(config);
+	
+	config->live_local_ip	= ipv6_parse(config->live_local_ip_string);
+
+	config->live_remote_prefix =
+		ipv6_prefix_parse(config->live_remote_ip_string);
+	set_remote_ip_and_prefix(config);
+
+	config->live_pref64 = ipv6_prefix_parse(config->live_pref64_string);
+	ip_prefix_normalize(&config->live_pref64);
+
+	config->live_prefix_len =
+		netmask_to_prefix(config->live_netmask_ip_string);
+	config->live_gateway_ip = ipv6_parse(config->live_gateway_ip_string);
+	if(ipv6_xlate_to_ipv4(config->live_local_ip,&config->live_bind_ip,config->live_pref64))
+		die("ipv6_xlate_to_ipv4 failed for local ip");
+	if(ipv6_xlate_to_ipv4(config->live_remote_ip,&config->live_connect_ip,config->live_pref64))
+		die("ipv6_xlate_to_ipv4 failed for remote ip");
+	config->socket_domain	= AF_INET;
+	config->wire_protocol	= AF_INET6;
+}
+
 /* Calculate final configuration values needed for IPv6 */
 static void finalize_ipv6_config(struct config *config)
 {
@@ -426,14 +478,20 @@ void finalize_config(struct config *config)
 	DEBUGP("finalize_config: config->live_local_ip_string: [%s]\n",
 	       config->live_local_ip_string);
 
-	assert(config->ip_version >= IP_VERSION_4);
-	assert(config->ip_version <= IP_VERSION_6);
+	assert(config->ip_version > IP_VERSION_UNKNOWN);
+	assert(config->ip_version < IP_VERSION_MAX);
 	switch (config->ip_version) {
 	case IP_VERSION_4:
 		finalize_ipv4_config(config);
 		break;
 	case IP_VERSION_4_MAPPED_6:
 		finalize_ipv4_mapped_ipv6_config(config);
+		break;
+	case IP_VERSION_4_TRANSLATED_6:
+		finalize_ipv4_xlate_ipv6_config(config);
+		break;
+	case IP_VERSION_6_TRANSLATED_4:
+		finalize_ipv6_xlate_ipv4_config(config);
 		break;
 	case IP_VERSION_6:
 		finalize_ipv6_config(config);
@@ -485,6 +543,10 @@ static void process_option(int opt, char *optarg, struct config *config,
 			config->ip_version = IP_VERSION_4;
 		else if (strcmp(optarg, "ipv4-mapped-ipv6") == 0)
 			config->ip_version = IP_VERSION_4_MAPPED_6;
+		else if (strcmp(optarg, "ipv4-xlate-ipv6") == 0)
+		config->ip_version = IP_VERSION_4_TRANSLATED_6;
+		else if (strcmp(optarg, "ipv6-xlate-ipv4") == 0)
+			config->ip_version = IP_VERSION_6_TRANSLATED_4;
 		else if (strcmp(optarg, "ipv6") == 0)
 			config->ip_version = IP_VERSION_6;
 		else
@@ -534,6 +596,9 @@ static void process_option(int opt, char *optarg, struct config *config,
 		break;
 	case OPT_NETMASK_IP:
 		strncpy(config->live_netmask_ip_string, optarg,	ADDR_STR_LEN-1);
+		break;
+	case OPT_PREF64:
+		strncpy(config->live_pref64_string, optarg,	ADDR_STR_LEN-1);
 		break;
 	case OPT_INIT_SCRIPTS:
 		config->init_scripts = optarg;

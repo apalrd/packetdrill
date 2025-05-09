@@ -140,7 +140,19 @@ enum ip_version_t {
 
 	/* Native IPv6, with AF_INET6 sockets and IPv6 addresses. */
 	IP_VERSION_6		= 2,
+
+	/* IPv4-Translated IPV6 Addresses
+	 * Use AF_INET6 sockets, but all addresses and packets on the
+	 * wire are IPv4
+	 */
+	IP_VERSION_4_TRANSLATED_6 = 3,
+	
+	/* IPv6-Translated IPv4 Addresses
+	 * As above, but AF_INET sockets and IPv6 on the wire
+	 */
+	IP_VERSION_6_TRANSLATED_4 = 4,
 };
+#define IP_VERSION_MAX IP_VERSION_6_TRANSLATED_4
 
 extern struct in_addr in4addr_any;
 
@@ -204,5 +216,22 @@ static inline s64 min(s64 a, s64 b)
 {
 	return (a < b) ? a : b;
 }
+
+/* IPv4 or IPv6 address. */
+struct ip_address {
+	int address_family;		/* AF_INET or AF_INET6 */
+	union {
+		struct in_addr v4;
+		struct in6_addr v6;
+		u8 bytes[16];
+	} ip;				/* IP address (network order) */
+};
+
+
+/* IPv4 or IPv6 address prefix. */
+struct ip_prefix {
+	struct ip_address ip;
+	int prefix_len;			/* prefix length in bits */
+};
 
 #endif /* __TYPES_H__ */

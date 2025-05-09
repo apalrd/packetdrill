@@ -26,18 +26,7 @@
 #define __IP_ADDRESS_H__
 
 #include "types.h"
-
 #include <netinet/in.h>
-
-/* IPv4 or IPv6 address. */
-struct ip_address {
-	int address_family;		/* AF_INET or AF_INET6 */
-	union {
-		struct in_addr v4;
-		struct in6_addr v6;
-		u8 bytes[16];
-	} ip;				/* IP address (network order) */
-};
 
 static inline void ip_reset(struct ip_address *ip)
 {
@@ -108,6 +97,17 @@ extern struct ip_address ipv6_map_from_ipv4(const struct ip_address ipv4);
  */
 extern int ipv6_map_to_ipv4(const struct ip_address ipv6,
 			    struct ip_address *ipv4);
+
+/* Create an IPv4-translated IPv6 address. */
+extern struct ip_address ipv6_xlate_from_ipv4(const struct ip_address ipv4, const struct ip_prefix pref64);
+
+/* Deconstruct an IPv4-translated IPv6 address and fill in *ipv4 with the
+ * IPv4 address that was translated into IPv6 space. Return STATUS_OK on
+ * success, or STATUS_ERR on failure (meaning the input ipv6 was not
+ * actually an IPv4-translated IPv6 address, or used a different prefix).
+ */
+extern int ipv6_xlate_to_ipv4(const struct ip_address ipv6,
+			    struct ip_address *ipv4, const struct ip_prefix pref64);
 
 /* Fill in a sockaddr struct and socklen_t using the given IP and port.
  * The IP address may be IPv4 or IPv6.

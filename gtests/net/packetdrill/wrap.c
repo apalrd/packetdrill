@@ -46,12 +46,14 @@ int wrap_socket(enum ip_version_t ip_version, int type)
 	int fd = -1;
 
 	switch (ip_version) {
+	case IP_VERSION_6_TRANSLATED_4:
 	case IP_VERSION_4:
 		fd = socket(AF_INET, type, 0);
 		if (fd < 0)
 			die_perror("socket(AF_INET)");
 		break;
 
+	case IP_VERSION_4_TRANSLATED_6:
 	case IP_VERSION_4_MAPPED_6:
 	case IP_VERSION_6:
 		fd = socket(AF_INET6, type, 0);

@@ -29,11 +29,6 @@
 
 #include "ip_address.h"
 
-/* IPv4 or IPv6 address prefix. */
-struct ip_prefix {
-	struct ip_address ip;
-	int prefix_len;			/* prefix length in bits */
-};
 
 static inline void ip_prefix_reset(struct ip_prefix *prefix)
 {
