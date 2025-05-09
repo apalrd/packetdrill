@@ -120,7 +120,7 @@ struct option options[] = {
 
 void show_usage(void)
 {
-	fprintf(stderr, "Usage: packetdrill\n"
+	fprintf(stderr, "Version: apalrd1\nUsage: packetdrill\n"
 		"\t[--ip_version=[ipv4,ipv4-mapped-ipv6,ipv6,ipv4-xlate-ipv6,ipv6-xlate-ipv4]]\n"
 		"\t[--bind_port=bind_port]\n"
 		"\t[--code_command=code_command]\n"
@@ -534,8 +534,13 @@ static void process_option(int opt, char *optarg, struct config *config,
 	char *error = NULL;
 	unsigned long speed = 0;
 
-	DEBUGP("process_option %d ('%c') = %s\n",
-	       opt, (char)opt, optarg);
+	const char *name = "UNKNOWN";
+	for(int i = 0;options[i].name != NULL;i++)
+		if(options[i].val == opt)
+			name = options[i].name;
+
+	DEBUGP("process_option %d ('%s') = %s\n",
+	       opt, name, optarg);
 
 	switch (opt) {
 	case OPT_IP_VERSION:
@@ -724,13 +729,14 @@ char **parse_command_line_options(int argc, char *argv[],
 	/* Parse the arguments. */
 	optind = 0;
 	while ((c = getopt_long(argc, argv, "vD:", options, NULL)) > 0)
-		process_option(c, optarg, config, "Command Line");
+		process_option(c,optarg, config, "Command Line");
 	return argv + optind;
 }
 
 static void parse_script_options(struct config *config,
 				 struct option_list *option_list)
 {
+	DEBUGP("parse_script_options\n");
 	struct option_list *opt = option_list;
 	while (opt != NULL) {
 		int i;
