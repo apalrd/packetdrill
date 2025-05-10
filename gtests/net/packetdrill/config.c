@@ -402,6 +402,26 @@ static void finalize_ipv4_xlate_ipv6_config(struct config *config)
 	config->live_connect_ip	= ipv6_xlate_from_ipv4(config->live_remote_ip,config->live_pref64);
 	config->socket_domain	= AF_INET6;
 	config->wire_protocol	= AF_INET;
+
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_bind_ip: %s\n",
+	       ip_to_string(&config->live_bind_ip, config->live_local_ip_string));
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_connect_ip: %s\n",
+	       ip_to_string(&config->live_connect_ip, config->live_remote_ip_string));
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_local_ip: %s\n",
+	       ip_to_string(&config->live_local_ip, config->live_local_ip_string));
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_remote_ip: %s\n",
+	       ip_to_string(&config->live_remote_ip, config->live_remote_ip_string));
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_gateway_ip: %s\n",
+	       ip_to_string(&config->live_gateway_ip, config->live_gateway_ip_string));
+	DEBUGP("finalize_ipv4_xlate_ipv6_config: "
+	       "live_pref64: %s\n",
+	       ip_prefix_to_string(&config->live_pref64,
+				   config->live_pref64_string));
 }
 
 /* Calculate final configuration values needed for ipv4-xlate-ipv6 */
@@ -427,7 +447,28 @@ static void finalize_ipv6_xlate_ipv4_config(struct config *config)
 		die("ipv6_xlate_to_ipv4 failed for remote ip");
 	config->socket_domain	= AF_INET;
 	config->wire_protocol	= AF_INET6;
+
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_bind_ip: %s\n",
+	       ip_to_string(&config->live_bind_ip, config->live_local_ip_string));
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_connect_ip: %s\n",
+	       ip_to_string(&config->live_connect_ip, config->live_remote_ip_string));
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_local_ip: %s\n",
+	       ip_to_string(&config->live_local_ip, config->live_local_ip_string));
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_remote_ip: %s\n",
+	       ip_to_string(&config->live_remote_ip, config->live_remote_ip_string));
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_gateway_ip: %s\n",
+	       ip_to_string(&config->live_gateway_ip, config->live_gateway_ip_string));
+	DEBUGP("finalize_ipv6_xlate_ipv4_config: "
+	       "live_pref64: %s\n",
+	       ip_prefix_to_string(&config->live_pref64,
+				   config->live_pref64_string));
 }
+
 
 /* Calculate final configuration values needed for IPv6 */
 static void finalize_ipv6_config(struct config *config)
